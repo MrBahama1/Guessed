@@ -632,6 +632,7 @@ const state = {
   allInputs: [],
   timerInterval: null,
   inputLocked: false,
+  leaderboard: [],
 };
 
 // ==============================================================
@@ -799,6 +800,25 @@ function renderFinal() {
       '</div>';
   }
 
+  var leaderboardHtml = '';
+  if (state.leaderboard && state.leaderboard.length > 0) {
+    var lbRows = '';
+    for (var j = 0; j < state.leaderboard.length; j++) {
+      var entry = state.leaderboard[j];
+      var displayName = entry.username || (entry.walletAddress ? entry.walletAddress.slice(0, 6) + '...' + entry.walletAddress.slice(-4) : 'Player');
+      var rankColor = entry.rank === 1 ? 'var(--neon-gold)' : entry.rank === 2 ? '#C0C0C0' : entry.rank === 3 ? '#CD7F32' : 'var(--text-dim)';
+      lbRows += '<div class="rs-row">' +
+        '<span class="rs-round" style="color:' + rankColor + ';min-width:28px">#' + entry.rank + '</span>' +
+        '<span style="flex:1;color:var(--text);font-weight:600;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(displayName) + '</span>' +
+        '<span style="color:var(--neon-cyan);font-family:Orbitron,sans-serif;font-size:0.75rem;font-weight:700">' + (entry.averageScore != null ? entry.averageScore : entry.score != null ? entry.score : 0) + ' XP</span>' +
+        '</div>';
+    }
+    leaderboardHtml = '<div class="panel mt-2" style="max-width:480px">' +
+      '<div class="label mb-1">Leaderboard</div>' +
+      '<div class="rounds-summary">' + lbRows + '</div>' +
+      '</div>';
+  }
+
   return '<div class="screen"><div class="scroll-area">' +
     '<div class="title-mega" style="margin-bottom:0.25rem">GUESSED!</div>' +
     '<div class="title-section">Game Over</div>' +
@@ -809,6 +829,7 @@ function renderFinal() {
     '<div class="label mb-1">All Rounds</div>' +
     '<div class="rounds-summary">' + roundRows + '</div>' +
     '</div>' +
+    leaderboardHtml +
     '<div class="row row-center mt-2">' +
     '<button class="btn btn-primary" data-action="go-back">GO BACK</button>' +
     '</div>' +
@@ -1093,6 +1114,11 @@ window.addEventListener('message', function(event) {
     state.settings.maxGuesses = data.maxGuesses || 6;
     state.settings.timeLimit = data.timeLimit || 60;
     startGame();
+  }
+
+  if (data.type === 'LEADERBOARD_DATA') {
+    state.leaderboard = data.entries || [];
+    if (state.screen === 'final') render();
   }
 });
 
