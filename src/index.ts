@@ -373,6 +373,11 @@ body { display: flex; justify-content: center; align-items: center; }
   background: rgba(255, 32, 112, 0.08);
   border: 1px solid rgba(255, 32, 112, 0.2);
 }
+.msg-info {
+  color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
 
 /* Round Intro */
 .round-intro { text-align: center; }
@@ -805,7 +810,7 @@ function renderFinal() {
     var lbRows = '';
     for (var j = 0; j < state.leaderboard.length; j++) {
       var entry = state.leaderboard[j];
-      var displayName = entry.username || (entry.walletAddress ? entry.walletAddress.slice(0, 6) + '...' + entry.walletAddress.slice(-4) : 'Player');
+      var displayName = entry.username || (entry.userAddress ? entry.userAddress.slice(0, 6) + '...' + entry.userAddress.slice(-4) : 'Player');
       var rankColor = entry.rank === 1 ? 'var(--neon-gold)' : entry.rank === 2 ? '#C0C0C0' : entry.rank === 3 ? '#CD7F32' : 'var(--text-dim)';
       lbRows += '<div class="rs-row">' +
         '<span class="rs-round" style="color:' + rankColor + ';min-width:28px">#' + entry.rank + '</span>' +
@@ -904,6 +909,15 @@ function startRound(roundIndex) {
   }, 2800);
 }
 
+function checkIsWord(word) {
+  return new Promise(function(resolve) {
+    var timeout = setTimeout(function() { resolve(true); }, 3000);
+    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
+      .then(function(res) { clearTimeout(timeout); resolve(res.ok); })
+      .catch(function() { clearTimeout(timeout); resolve(true); });
+  });
+}
+
 function submitGuess() {
   if (state.inputLocked) return;
   var input = document.getElementById('guess-input');
@@ -921,6 +935,23 @@ function submitGuess() {
   }
 
   state.inputLocked = true;
+  showMessage('Checking word...', 'info');
+
+  checkIsWord(guess).then(function(isValid) {
+    if (!isValid) {
+      state.inputLocked = false;
+      showMessage('Not a valid English word', 'error');
+      shakeElement(document.getElementById('input-area'));
+      input.value = '';
+      input.focus();
+      return;
+    }
+    processGuess(guess);
+  });
+}
+
+function processGuess(guess) {
+  var word = state.words[state.currentRound];
 
   // Record input for replay
   state.allInputs.push({ round: state.currentRound, guess: guess });
